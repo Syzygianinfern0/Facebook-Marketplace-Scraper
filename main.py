@@ -1,6 +1,8 @@
 import random
 import time
 
+import apprise
+import yaml
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -45,6 +47,10 @@ class FacebookMarketplaceScraper:
 
 def main():
     scraper = FacebookMarketplaceScraper()
+    apobj = apprise.Apprise()
+    with open("config.yaml", "r") as f:
+        configs = yaml.safe_load(f)
+    apobj.add(configs["apprise"])
 
     # Get the queries
     sheets = Sheets()
@@ -65,6 +71,8 @@ def main():
         new_links = [link for link in new_links if link not in old_links]
         sheets.update_links(query, new_links)
         print(f"Added {len(new_links)} new links for {query}")
+        for link in new_links:
+            apobj.notify(body=link, title=query)
 
 
 if __name__ == "__main__":
