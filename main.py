@@ -15,8 +15,13 @@ def random_sleep():
 
 
 class FacebookMarketplaceScraper:
-    def __init__(self):
-        self.driver = webdriver.Chrome()
+    def __init__(self, headless=True):
+        options = webdriver.ChromeOptions()
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        if headless:
+            options.add_argument("--headless")
+        self.driver = webdriver.Chrome(options=options)
 
     def click_close_button(self):
         close_button = self.driver.find_element(By.XPATH, "//div[@aria-label='Close']")
@@ -46,7 +51,7 @@ class FacebookMarketplaceScraper:
 
 
 def main():
-    scraper = FacebookMarketplaceScraper()
+    scraper = FacebookMarketplaceScraper(headless=True)
     apobj = apprise.Apprise()
     with open("config.yaml", "r") as f:
         configs = yaml.safe_load(f)
