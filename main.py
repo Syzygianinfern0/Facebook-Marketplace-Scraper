@@ -1,3 +1,4 @@
+import logging
 import random
 import time
 
@@ -52,10 +53,18 @@ class FacebookMarketplaceScraper:
 
 def main():
     scraper = FacebookMarketplaceScraper(headless=True)
+
+    # Set up the notification service
     apobj = apprise.Apprise()
     with open("config.yaml", "r") as f:
         configs = yaml.safe_load(f)
     apobj.add(configs["apprise"])
+
+    # Set up logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
 
     # Get the queries
     sheets = Sheets()
@@ -75,7 +84,8 @@ def main():
         old_links = sheets.get_links(query)
         new_links = [link for link in new_links if link not in old_links]
         sheets.update_links(query, new_links)
-        print(f"Added {len(new_links)} new links for {query}")
+        # print(f"Added {len(new_links)} new links for {query}")
+        logging.info(f"Added {len(new_links)} new links for {query}")
         for link in new_links:
             apobj.notify(body=link, title=query)
 
