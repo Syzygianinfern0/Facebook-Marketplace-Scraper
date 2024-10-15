@@ -16,7 +16,12 @@ class Sheets:
         self.sheet.add_worksheet(title, 1000, 26)
 
     def get_links(self, title):
-        worksheet = self.sheet.worksheet(title)
+        try:
+            worksheet = self.sheet.worksheet(title)
+        except gspread.exceptions.WorksheetNotFound:
+            self.create_worksheet(title)
+            worksheet = self.sheet.worksheet(title)
+
         links = worksheet.col_values(1)
 
         return links

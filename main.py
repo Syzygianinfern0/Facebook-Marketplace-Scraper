@@ -5,6 +5,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
+from sheets import Sheets
+
 
 def random_sleep():
     time.sleep(random.randint(1, 3))
@@ -45,21 +47,24 @@ def main():
     scraper = FacebookMarketplaceScraper()
 
     # Get the queries
-    queries = ["dining table set", "couch", "bed frame"]
+    sheets = Sheets()
+    queries = sheets.get_queries()
 
     # Get the links
-    links = []
+    links = {}
     for query in queries:
-        links.extend(scraper.get_listings(query))
+        links[query] = scraper.get_listings(query)
+        random_sleep()
 
     # Close the browser
     scraper.close()
 
-    # Print the links
-    print(f"Found {len(links)} links")
-    print("Links:")
-    for link in links:
-        print(link)
+    # Check if the links are new
+    for query, new_links in links.items():
+        old_links = sheets.get_links(query)
+        new_links = [link for link in new_links if link not in old_links]
+        sheets.update_links(query, new_links)
+        print(f"Added {len(new_links)} new links for {query}")
 
 
 if __name__ == "__main__":
