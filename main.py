@@ -80,7 +80,7 @@ def main():
     # Get the links
     links = {}
     prices = {}
-    for query in queries:
+    for query in queries.keys():
         links[query], prices[query] = scraper.get_listings(query)
         random_sleep()
 
@@ -94,9 +94,19 @@ def main():
         sheets.update_links(query, new_links)
         # print(f"Added {len(new_links)} new links for {query}")
         logging.info(f"Added {len(new_links)} new links for {query}")
+
         for link in new_links:
-            body = f"{link}\nPrice: {prices[query][link]}"
-            apobj.notify(body=body, title=query)
+            # Extract and clean the price
+            price_str = prices[query][link]
+            if price_str.lower() == "free":  # Handle "Free" explicitly
+                price_value = 0
+            else:
+                price_value = int(price_str.replace("$", "").replace(",", ""))
+
+            # Check if the price is within the desired range
+            if queries[query]["min_price"] <= price_value <= queries[query]["max_price"]:
+                body = f"{link}\nPrice: {prices[query][link]}"
+                apobj.notify(body=body, title=query)
 
 
 if __name__ == "__main__":
