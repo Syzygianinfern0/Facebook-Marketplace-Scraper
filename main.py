@@ -45,7 +45,14 @@ class FacebookMarketplaceScraper:
             if href and href.startswith("https://www.facebook.com/marketplace/item/"):
                 cleaned_links.append(href.split("?")[0])
 
-        return cleaned_links
+        # get prices from css selector ".xjkvuk6.xkhd6sd .x1s688f"
+        prices = self.driver.find_elements(By.CSS_SELECTOR, ".xjkvuk6.xkhd6sd .x1s688f")
+        prices = [price.text for price in prices]
+        # print(prices)
+        assert len(prices) == len(cleaned_links)
+        prices = {link: price for link, price in zip(cleaned_links, prices)}
+
+        return cleaned_links, prices
 
     def close(self):
         self.driver.quit()
@@ -72,8 +79,9 @@ def main():
 
     # Get the links
     links = {}
+    prices = {}
     for query in queries:
-        links[query] = scraper.get_listings(query)
+        links[query], prices[query] = scraper.get_listings(query)
         random_sleep()
 
     # Close the browser
@@ -87,7 +95,8 @@ def main():
         # print(f"Added {len(new_links)} new links for {query}")
         logging.info(f"Added {len(new_links)} new links for {query}")
         for link in new_links:
-            apobj.notify(body=link, title=query)
+            body = f"{link}\nPrice: {prices[query][link]}"
+            apobj.notify(body=body, title=query)
 
 
 if __name__ == "__main__":
