@@ -39,6 +39,7 @@ class FacebookMarketplaceScraper:
 
         # Get all the links
         links = self.driver.find_elements(By.TAG_NAME, "a")
+        logging.info(f"Found {len(links)} links from {query} on marketplace")
         cleaned_links = []
         for link in links:
             href = link.get_attribute("href")
