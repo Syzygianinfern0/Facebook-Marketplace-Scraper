@@ -31,7 +31,7 @@ class Sheets:
     def create_worksheet(self, title):
         worksheet = self.sheet.add_worksheet(title, 1000, 26)
         # Add headers for detailed info
-        worksheet.update("A1:F1", [["Link", "Price", "Creation Time", "Location", "Latitude", "Longitude"]])
+        worksheet.update("A1:G1", [["Link", "Title", "Price", "Creation Time", "Location", "Latitude", "Longitude"]])
 
     def get_links(self, title):
         try:
@@ -54,6 +54,7 @@ class Sheets:
             info = listing_info.get(link, {})
             row = [
                 link,
+                info.get("title", ""),
                 prices[link],
                 info.get("creation_time", "").strftime("%Y-%m-%d %H:%M:%S") if info.get("creation_time") else "",
                 info.get("location", ""),
@@ -63,5 +64,5 @@ class Sheets:
             update_data.append(row)
 
         # Update the sheet
-        update_range = f"A{start_row}:F{start_row + len(update_data) - 1}"
+        update_range = f"A{start_row}:G{start_row + len(update_data) - 1}"
         worksheet.update(update_data, update_range)

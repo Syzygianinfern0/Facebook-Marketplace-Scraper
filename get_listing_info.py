@@ -27,4 +27,5 @@ lat = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["loca
 lng = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["location"]["longitude"]
 location = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["location_text"]["text"]
 name = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["marketplace_listing_title"]
-print(creation_time, lat, lng, location, name)
+price = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["formatted_price"]["text"]
+print(creation_time, lat, lng, location, name, price)
