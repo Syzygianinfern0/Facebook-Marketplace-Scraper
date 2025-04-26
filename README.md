@@ -2,6 +2,8 @@
 
 A Python-based web scraper for Facebook Marketplace that monitors listings based on specific search queries and notifies users about new listings that match their criteria.
 
+https://github.com/user-attachments/assets/c6c6bb56-29c9-44b8-92e0-d1fe4d82569f
+
 ## Features
 
 - Automated scraping of Facebook Marketplace listings every 30 minutes
