@@ -79,12 +79,12 @@ class FacebookMarketplaceScraper:
 
         # Get all the links
         links = self.driver.find_elements(By.TAG_NAME, "a")
-        logging.info(f"Found {len(links)} links from {query} on marketplace")
         cleaned_links = []
         for link in links:
             href = link.get_attribute("href")
             if href and href.startswith("https://www.facebook.com/marketplace/item/"):
                 cleaned_links.append(href.split("?")[0])
+        logging.info(f"Found {len(cleaned_links)} links for {query} on marketplace")
 
         # get prices from css selector ".xjkvuk6.xkhd6sd .x1s688f"
         prices = self.driver.find_elements(By.CSS_SELECTOR, ".xjkvuk6.xkhd6sd .x1s688f")
@@ -135,23 +135,39 @@ def main():
 
         # Get detailed info for new links
         listing_info = {}
-        for link in new_links:
+        total_links = len(new_links)
+
+        logging.info(f"Processing {total_links} new links for query: {query}")
+
+        for i, link in enumerate(new_links, 1):
             try:
                 listing_info[link] = get_listing_info(link)
+                if i % 5 == 0 or i == total_links:  # Log every 5 links and at the end
+                    logging.info(f"Processed {i}/{total_links} links for {query}")
                 random_sleep()  # Add delay between API calls
             except Exception as e:
                 logging.error(f"Error getting listing info for {link}: {str(e)}")
-                continue
+                # Try one more time after a delay
+                try:
+                    time.sleep(5)  # Wait 5 seconds before retry
+                    logging.info(f"Retrying to get info for {link}")
+                    listing_info[link] = get_listing_info(link)
+                except Exception as e:
+                    logging.error(f"Failed again to get listing info for {link}: {str(e)}")
+                    continue
 
         # Update sheets with all new links and their info
         sheets.update_links(query, new_links, prices[query], listing_info)
-        logging.info(f"Added {len(new_links)} new links for {query}")
+        logging.info(f"Added {len(new_links)} new links for {query} to sheets")
 
         # Send notifications for links that meet criteria
+        total_processed = 0
+        total_notified = 0
         for link in new_links:
             if link not in listing_info:
                 continue
 
+            total_processed += 1
             info = listing_info[link]
             # Parse the price
             price_value = parse_price(prices[query][link])
@@ -160,14 +176,18 @@ def main():
             if queries[query]["min_price"] <= price_value <= queries[query]["max_price"] and datetime.now() - info[
                 "creation_time"
             ] <= timedelta(hours=24):
+                total_notified += 1
                 body = (
                     f"{link}\n"
+                    f"Title: {info['title']}"
                     f"Price: {prices[query][link]}\n"
                     f"Posted: {info['creation_time'].strftime('%Y-%m-%d %H:%M:%S')}\n"
                     f"Location: {info['location']}\n"
-                    f"Title: {info['title']}"
                 )
                 apobj.notify(body=body, title=query)
+                time.sleep(3)
+
+        logging.info(f"Processed {total_processed} listings, sent {total_notified} notifications for {query}")
 
 
 if __name__ == "__main__":
