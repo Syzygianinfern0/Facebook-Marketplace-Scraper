@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import gspread
 
 
@@ -27,7 +29,9 @@ class Sheets:
         return results
 
     def create_worksheet(self, title):
-        self.sheet.add_worksheet(title, 1000, 26)
+        worksheet = self.sheet.add_worksheet(title, 1000, 26)
+        # Add headers for detailed info
+        worksheet.update("A1:F1", [["Link", "Price", "Creation Time", "Location", "Latitude", "Longitude"]])
 
     def get_links(self, title):
         try:
@@ -37,12 +41,27 @@ class Sheets:
             worksheet = self.sheet.worksheet(title)
 
         links = worksheet.col_values(1)
-
         return links
 
-    def update_links(self, title, new_links):
+    def update_links(self, title, new_links, prices, listing_info):
         worksheet = self.sheet.worksheet(title)
         old_links = self.get_links(title)
-        update_range = f"A{len(old_links) + 1}:A{len(old_links) + len(new_links)}"
+        start_row = len(old_links) + 1
 
-        worksheet.update([[link] for link in new_links], update_range)
+        # Prepare data for update
+        update_data = []
+        for link in new_links:
+            info = listing_info.get(link, {})
+            row = [
+                link,
+                prices[link],
+                info.get("creation_time", "").strftime("%Y-%m-%d %H:%M:%S") if info.get("creation_time") else "",
+                info.get("location", ""),
+                info.get("latitude", ""),
+                info.get("longitude", ""),
+            ]
+            update_data.append(row)
+
+        # Update the sheet
+        update_range = f"A{start_row}:F{start_row + len(update_data) - 1}"
+        worksheet.update(update_data, update_range)

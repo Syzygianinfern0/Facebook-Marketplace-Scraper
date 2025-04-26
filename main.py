@@ -34,8 +34,25 @@ def get_listing_info(link):
     )
 
     data = response.json()
-    creation_time = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["creation_time"]
-    return datetime.fromtimestamp(creation_time)
+    target = data["data"]["viewer"]["marketplace_product_details_page"]["target"]
+
+    return {
+        "creation_time": datetime.fromtimestamp(target["creation_time"]),
+        "location": target["location_text"]["text"],
+        "latitude": target["location"]["latitude"],
+        "longitude": target["location"]["longitude"],
+        "title": target["marketplace_listing_title"],
+    }
+
+
+def parse_price(price_str):
+    if price_str.lower() == "free":
+        return 0
+    # Extract all numeric characters
+    numeric_str = re.sub(r"[^\d]", "", price_str)
+    if not numeric_str:
+        return float("inf")  # Return infinity for non-numeric prices
+    return int(numeric_str)
 
 
 class FacebookMarketplaceScraper:
@@ -115,28 +132,42 @@ def main():
     for query, new_links in links.items():
         old_links = sheets.get_links(query)
         new_links = [link for link in new_links if link not in old_links]
-        sheets.update_links(query, new_links)
+
+        # Get detailed info for new links
+        listing_info = {}
+        for link in new_links:
+            try:
+                listing_info[link] = get_listing_info(link)
+                random_sleep()  # Add delay between API calls
+            except Exception as e:
+                logging.error(f"Error getting listing info for {link}: {str(e)}")
+                continue
+
+        # Update sheets with all new links and their info
+        sheets.update_links(query, new_links, prices[query], listing_info)
         logging.info(f"Added {len(new_links)} new links for {query}")
 
+        # Send notifications for links that meet criteria
         for link in new_links:
-            # Extract and clean the price
-            price_str = prices[query][link]
-            if price_str.lower() == "free":  # Handle "Free" explicitly
-                price_value = 0
-            else:
-                price_value = int(price_str.replace("$", "").replace(",", ""))
+            if link not in listing_info:
+                continue
 
-            # Check if the price is within the desired range
-            if queries[query]["min_price"] <= price_value <= queries[query]["max_price"]:
-                # Get listing creation time
-                try:
-                    creation_time = get_listing_info(link)
-                    # Check if listing was created within last 24 hours
-                    if datetime.now() - creation_time <= timedelta(hours=24):
-                        body = f"{link}\nPrice: {prices[query][link]}\nPosted: {creation_time.strftime('%Y-%m-%d %H:%M:%S')}"
-                        apobj.notify(body=body, title=query)
-                except Exception as e:
-                    logging.error(f"Error getting listing info for {link}: {str(e)}")
+            info = listing_info[link]
+            # Parse the price
+            price_value = parse_price(prices[query][link])
+
+            # Check if the price is within the desired range and listing is within 24 hours
+            if queries[query]["min_price"] <= price_value <= queries[query]["max_price"] and datetime.now() - info[
+                "creation_time"
+            ] <= timedelta(hours=24):
+                body = (
+                    f"{link}\n"
+                    f"Price: {prices[query][link]}\n"
+                    f"Posted: {info['creation_time'].strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    f"Location: {info['location']}\n"
+                    f"Title: {info['title']}"
+                )
+                apobj.notify(body=body, title=query)
 
 
 if __name__ == "__main__":
