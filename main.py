@@ -1,8 +1,12 @@
+import json
 import logging
 import random
+import re
 import time
+from datetime import datetime, timedelta
 
 import apprise
+import requests
 import yaml
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -13,6 +17,25 @@ from sheets import Sheets
 
 def random_sleep():
     time.sleep(random.randint(1, 3))
+
+
+def get_listing_info(link):
+    listing_id = re.search(r"/item/(\d+)/?", link).group(1)
+
+    headers = {"sec-fetch-site": "same-origin"}
+    data = {
+        "variables": json.dumps({"targetId": listing_id}),
+        "doc_id": "24259665626956870",
+    }
+    response = requests.post(
+        "https://www.facebook.com/api/graphql/",
+        headers=headers,
+        data=data,
+    )
+
+    data = response.json()
+    creation_time = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["creation_time"]
+    return datetime.fromtimestamp(creation_time)
 
 
 class FacebookMarketplaceScraper:
@@ -93,7 +116,6 @@ def main():
         old_links = sheets.get_links(query)
         new_links = [link for link in new_links if link not in old_links]
         sheets.update_links(query, new_links)
-        # print(f"Added {len(new_links)} new links for {query}")
         logging.info(f"Added {len(new_links)} new links for {query}")
 
         for link in new_links:
@@ -106,8 +128,15 @@ def main():
 
             # Check if the price is within the desired range
             if queries[query]["min_price"] <= price_value <= queries[query]["max_price"]:
-                body = f"{link}\nPrice: {prices[query][link]}"
-                apobj.notify(body=body, title=query)
+                # Get listing creation time
+                try:
+                    creation_time = get_listing_info(link)
+                    # Check if listing was created within last 24 hours
+                    if datetime.now() - creation_time <= timedelta(hours=24):
+                        body = f"{link}\nPrice: {prices[query][link]}\nPosted: {creation_time.strftime('%Y-%m-%d %H:%M:%S')}"
+                        apobj.notify(body=body, title=query)
+                except Exception as e:
+                    logging.error(f"Error getting listing info for {link}: {str(e)}")
 
 
 if __name__ == "__main__":
