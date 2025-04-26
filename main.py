@@ -154,6 +154,7 @@ def main():
                     listing_info[link] = get_listing_info(link)
                 except Exception as e:
                     logging.error(f"Failed again to get listing info for {link}: {str(e)}")
+                    apobj.notify(body=f"Failed to get listing info for {link}: {str(e)}")
                     continue
 
         # Update sheets with all new links and their info
