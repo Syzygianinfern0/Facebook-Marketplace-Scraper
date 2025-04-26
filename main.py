@@ -70,7 +70,10 @@ class FacebookMarketplaceScraper:
 
     def get_listings(self, query):
         # Open the website
-        self.driver.get(f"https://www.facebook.com/marketplace/austin/search/?query={query}")
+        with open("config.yaml", "r") as f:
+            configs = yaml.safe_load(f)
+        location = configs.get("location", "austin")  # Default to austin if not specified
+        self.driver.get(f"https://www.facebook.com/marketplace/{location}/search/?query={query}")
         self.click_close_button()
 
         # Scroll down
