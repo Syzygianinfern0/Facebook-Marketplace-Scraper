@@ -25,5 +25,6 @@ creation_time = data["data"]["viewer"]["marketplace_product_details_page"]["targ
 creation_time = datetime.fromtimestamp(creation_time)
 lat = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["location"]["latitude"]
 lng = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["location"]["longitude"]
+location = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["location_text"]["text"]
 name = data["data"]["viewer"]["marketplace_product_details_page"]["target"]["marketplace_listing_title"]
-print(creation_time, lat, lng, name)
+print(creation_time, lat, lng, location, name)
