@@ -19,10 +19,14 @@ def random_sleep():
     time.sleep(random.randint(1, 3))
 
 
-def get_listing_info(link):
+def get_listing_info(link, cookies=None):
     listing_id = re.search(r"/item/(\d+)/?", link).group(1)
 
     headers = {"sec-fetch-site": "same-origin"}
+    if cookies:
+        # Convert Selenium cookies to name:value dict
+        cookies = {cookie["name"]: cookie["value"] for cookie in cookies}
+
     data = {
         "variables": json.dumps({"targetId": listing_id}),
         "doc_id": "24259665626956870",
@@ -31,6 +35,7 @@ def get_listing_info(link):
         "https://www.facebook.com/api/graphql/",
         headers=headers,
         data=data,
+        cookies=cookies,
     )
 
     data = response.json()
@@ -128,9 +133,6 @@ def main():
         links[query], prices[query] = scraper.get_listings(query)
         random_sleep()
 
-    # Close the browser
-    scraper.close()
-
     # Check if the links are new
     for query, new_links in links.items():
         old_links = sheets.get_links(query)
@@ -144,7 +146,7 @@ def main():
 
         for i, link in enumerate(new_links, 1):
             try:
-                listing_info[link] = get_listing_info(link)
+                listing_info[link] = get_listing_info(link, cookies=scraper.driver.get_cookies())
                 if i % 5 == 0 or i == total_links:  # Log every 5 links and at the end
                     logging.info(f"Processed {i}/{total_links} links for {query}")
                 random_sleep()  # Add delay between API calls
@@ -154,7 +156,7 @@ def main():
                 try:
                     time.sleep(5)  # Wait 5 seconds before retry
                     logging.info(f"Retrying to get info for {link}")
-                    listing_info[link] = get_listing_info(link)
+                    listing_info[link] = get_listing_info(link, cookies=scraper.driver.get_cookies())
                 except Exception as e:
                     logging.error(f"Failed again to get listing info for {link}: {str(e)}")
                     apobj.notify(body=f"Failed to get listing info for {link}: {str(e)}")
@@ -192,6 +194,9 @@ def main():
                 time.sleep(3)
 
         logging.info(f"Processed {total_processed} listings, sent {total_notified} notifications for {query}")
+
+    # Close the browser
+    scraper.close()
 
 
 if __name__ == "__main__":
