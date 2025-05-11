@@ -29,7 +29,7 @@ def get_listing_info(link, cookies=None):
 
     data = {
         "variables": json.dumps({"targetId": listing_id}),
-        "doc_id": "24259665626956870",
+        "doc_id": "9668679113214200",
     }
     response = requests.post(
         "https://www.facebook.com/api/graphql/",
@@ -38,7 +38,35 @@ def get_listing_info(link, cookies=None):
         cookies=cookies,
     )
 
-    data = response.json()
+    # Handle potential multiple JSON objects in response
+    try:
+        # Try to parse the entire response first
+        data = response.json()
+    except json.JSONDecodeError:
+        # If that fails, try to find the first valid JSON object
+        content = response.text.strip()
+        # Find the first occurrence of a complete JSON object
+        first_brace = content.find("{")
+        if first_brace != -1:
+            # Find the matching closing brace
+            stack = []
+            for i, char in enumerate(content[first_brace:], first_brace):
+                if char == "{":
+                    stack.append(i)
+                elif char == "}":
+                    if stack:
+                        stack.pop()
+                        if not stack:  # Found matching closing brace
+                            try:
+                                data = json.loads(content[first_brace : i + 1])
+                                break
+                            except json.JSONDecodeError:
+                                continue
+            else:
+                raise json.JSONDecodeError("No valid JSON object found", content, 0)
+        else:
+            raise json.JSONDecodeError("No JSON object found", content, 0)
+
     target = data["data"]["viewer"]["marketplace_product_details_page"]["target"]
 
     return {
