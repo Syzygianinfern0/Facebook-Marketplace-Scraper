@@ -3,21 +3,37 @@ import re
 from datetime import datetime
 
 import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
-# link = "https://www.facebook.com/marketplace/item/611908928559542/"
-link = "https://www.facebook.com/marketplace/item/1363526394799665"
+link = "https://www.facebook.com/marketplace/item/2225569484525431"
+
+# First get cookies using Selenium
+options = Options()
+options.add_argument("--headless")  # Run in headless mode
+driver = webdriver.Chrome(options=options)
+
+# Visit the marketplace page to get cookies
+driver.get("https://www.facebook.com/marketplace")
+cookies = driver.get_cookies()
+driver.quit()
+
+# Convert Selenium cookies to requests format
+cookies_dict = {cookie["name"]: cookie["value"] for cookie in cookies}
 
 listing_id = re.search(r"/item/(\d+)/?", link).group(1)
 
 headers = {"sec-fetch-site": "same-origin"}
 data = {
     "variables": json.dumps({"targetId": listing_id}),
-    "doc_id": "24259665626956870",
+    "doc_id": "9668679113214200",
 }
+
 response = requests.post(
     "https://www.facebook.com/api/graphql/",
     headers=headers,
     data=data,
+    cookies=cookies_dict,
 )
 
 data = response.json()
