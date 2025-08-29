@@ -123,7 +123,8 @@ class FacebookMarketplaceScraper:
         logging.info(f"Found {len(cleaned_links)} links for {query} on marketplace")
 
         # get prices from css selector ".xjkvuk6.xkhd6sd .x1s688f"
-        prices = self.driver.find_elements(By.CSS_SELECTOR, ".xjkvuk6.xkhd6sd .x1s688f")
+        # prices = self.driver.find_elements(By.CSS_SELECTOR, ".xjkvuk6.xkhd6sd .x1s688f")
+        prices = self.driver.find_elements(By.CSS_SELECTOR, ".xjkvuk6.x1c1uobl .x1s688f")
         prices = [price.text for price in prices]
         # print(prices)
         assert len(prices) == len(cleaned_links)
