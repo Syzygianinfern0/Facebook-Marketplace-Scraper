@@ -101,11 +101,8 @@ class FacebookMarketplaceScraper:
         close_button = self.driver.find_element(By.XPATH, "//div[@aria-label='Close']")
         close_button.click()
 
-    def get_listings(self, query):
+    def get_listings(self, query, location):
         # Open the website
-        with open("config.yaml", "r") as f:
-            configs = yaml.safe_load(f)
-        location = configs.get("location", "austin")  # Default to austin if not specified
         self.driver.get(f"https://www.facebook.com/marketplace/{location}/search/?query={query}")
         self.click_close_button()
 
@@ -158,9 +155,18 @@ def main():
     # Get the links
     links = {}
     prices = {}
+    locations = configs.get("locations", ["austin"])  # Default to austin if not specified
+
     for query in queries.keys():
-        links[query], prices[query] = scraper.get_listings(query)
-        random_sleep()
+        all_links = []
+        all_prices = {}
+        for location in locations:
+            location_links, location_prices = scraper.get_listings(query, location)
+            all_links.extend(location_links)
+            all_prices.update(location_prices)
+            random_sleep()
+        links[query] = all_links
+        prices[query] = all_prices
 
     # Check if the links are new
     for query, new_links in links.items():
